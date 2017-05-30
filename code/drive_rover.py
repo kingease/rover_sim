@@ -51,6 +51,8 @@ class RoverState():
         self.brake = 0 # Current brake value
         self.nav_angles = None # Angles of navigable terrain pixels
         self.nav_dists = None # Distances of navigable terrain pixels
+        self.sample_dists = None
+        self.sample_angles = None
         self.ground_truth = ground_truth_3d # Ground truth worldmap
         self.mode = 'forward' # Current mode (can be forward or stop)
         self.throttle_set = 0.2 # Throttle setting when accelerating
@@ -114,14 +116,15 @@ def telemetry(sid, data):
             out_image_string1, out_image_string2 = create_output_images(Rover)
 
             # The action step!  Send commands to the rover!
-            commands = (Rover.throttle, Rover.brake, Rover.steer)
-            send_control(commands, out_image_string1, out_image_string2)
- 
             # If in a state where want to pickup a rock send pickup command
             if Rover.send_pickup:
                 send_pickup()
                 # Reset Rover flags
                 Rover.send_pickup = False
+
+            else:
+                commands = (Rover.throttle, Rover.brake, Rover.steer)
+                send_control(commands, out_image_string1, out_image_string2)
         # In case of invalid telemetry, send null commands
         else:
 
@@ -148,6 +151,7 @@ def connect(sid, environ):
         "get_samples",
         sample_data,
         skip_sid=True)
+    eventlet.sleep(0)
 
 def send_control(commands, image_string1, image_string2):
     # Define commands to be sent to the rover
@@ -163,6 +167,7 @@ def send_control(commands, image_string1, image_string2):
         "data",
         data,
         skip_sid=True)
+    eventlet.sleep(0)
 
 # Define a function to send the "pickup" command 
 def send_pickup():
@@ -172,6 +177,7 @@ def send_pickup():
         "pickup",
         pickup,
         skip_sid=True)
+    eventlet.sleep(0)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Remote Driving')
@@ -184,7 +190,7 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
     
-    os.system('rm -rf IMG_stream/*')
+    # os.system('rm -rf IMG_stream/*')
     if args.image_folder != '':
         print("Creating image folder at {}".format(args.image_folder))
         if not os.path.exists(args.image_folder):
