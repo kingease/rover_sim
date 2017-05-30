@@ -2,8 +2,8 @@ import numpy as np
 
 counter = 0
 stuck_change_counter = 0
-stuck_sign = 1
 found_counter = 0
+picking_counter = 0
 # This is where you can build a decision tree for determining throttle, brake and steer 
 # commands based on the output of the perception_step() function
 def decision_step(Rover):
@@ -16,17 +16,18 @@ def decision_step(Rover):
     # Check if we have vision data to make decisions with
     global counter
     global stuck_change_counter
-    global stuck_sign
     global found_counter
+    global picking_counter
 
-    print(Rover.near_sample)
-    print(Rover.mode)
-    print(Rover.send_pickup)
+    # print(Rover.near_sample)
+    # print(Rover.mode)
+    # print(Rover.send_pickup)
     
     if Rover.nav_angles is not None:
         # Check for Rover.mode status
         if Rover.mode == 'forward': 
             found_counter = 0
+            picking_counter = 0
             if len(Rover.sample_angles) > 0:
                 Rover.brake = Rover.brake_set
                 Rover.throttle = 0
@@ -43,7 +44,7 @@ def decision_step(Rover):
                     Rover.throttle = 0
                 Rover.brake = 0
                 # Set steering to average angle clipped to the range +/- 15
-                dir_angle = np.percentile(Rover.nav_angles  * 180/np.pi, np.random.randint(20, 40))
+                dir_angle = np.percentile(Rover.nav_angles  * 180/np.pi, np.random.randint(60, 80))
                 if np.random.randint(100) % 4 == 0:
                     dir_angle = 0
 
@@ -54,7 +55,6 @@ def decision_step(Rover):
 
                 # get stuck
                 if Rover.vel < 0.1:
-                    print("counter", counter)
                     counter+= 1
                     if counter > 30:
                         Rover.mode = "stuck"
@@ -84,7 +84,7 @@ def decision_step(Rover):
                     # Release the brake to allow turning
                     Rover.brake = 0
                     # Turn range is +/- 15 degrees, when stopped the next line will induce 4-wheel turning
-                    Rover.steer = 15 # Could be more clever here about which way to turn
+                    Rover.steer = -15 # Could be more clever here about which way to turn
                 # If we're stopped but see sufficient navigable terrain in front then go!
                 if len(Rover.nav_angles) >= Rover.go_forward:
                     # Set throttle back to stored value
@@ -104,7 +104,7 @@ def decision_step(Rover):
             # Release the brake to allow turning
             Rover.brake = 0
             # Turn range is +/- 15 degrees, when stopped the next line will induce 4-wheel turning
-            Rover.steer = 15 # Could be more clever here about which way to turn
+            Rover.steer = -15 # Could be more clever here about which way to turn
 
             if stuck_change_counter > np.random.randint(20, 50):
                 counter = 0
@@ -117,44 +117,46 @@ def decision_step(Rover):
                 Rover.mode = "forward"
 
         elif Rover.mode == "found":
-            if len(Rover.sample_angles) == 0 and found_counter < 100:
+            picking_counter = 0
+            if len(Rover.sample_angles) == 0 and found_counter > 400:
                 Rover.mode = "forward"
-            elif Rover.vel > 0.2:
+            elif Rover.vel > Rover.max_vel*0.9:
                 Rover.throttle = 0
-                Rover.brake = Rover.brake_set
+                Rover.brake = Rover.brake_set * 0.02
                 Rover.steer = 0
-            elif Rover.vel <= 0.2:
+            elif Rover.vel <= Rover.max_vel*0.9:
                 Rover.brake = 0
                 print(np.mean(Rover.sample_dists))
-                dir_angle = np.mean(Rover.sample_angles) * 180/np.pi
+                dir_angle = np.mean(Rover.sample_angles) * 180 / np.pi if len(Rover.sample_angles) > 0 else 0
                 dist = np.mean(Rover.sample_dists)
                 print(dir_angle, dist)
-                if  dist > 80:
-                    Rover.throttle = Rover.throttle_set
+                if abs(dir_angle) > 25: # dir_angle is too large stop and turn body
+                    Rover.throttle = 0 
                     Rover.steer = np.clip(dir_angle, -15, 15)
                 else:
                     Rover.mode = "picking"
 
-                if abs(dir_angle) > 40: # stop and turn body
-                    Rover.throttle = 0 
-                    Rover.steer = np.clip(dir_angle, -15, 15)
             found_counter += 1
 
         elif Rover.mode == "picking":
-            if len(Rover.sample_angles) == 0:
+            found_counter = 0
+            if len(Rover.sample_angles) == 0 and picking_counter > 400:
                 Rover.mode = 'forward'
-            elif Rover.near_sample == 0:
+            elif Rover.near_sample == 0: # moving slowly
                 Rover.brake = 0
-                Rover.throttle = Rover.throttle_set * 0.8
-                dir_angle = np.mean(Rover.sample_angles) * 180/np.pi
+                Rover.throttle = Rover.throttle_set * 0.5
+                dir_angle = np.mean(Rover.sample_angles) * 180 / np.pi if len(Rover.sample_angles) > 0 else 0
                 Rover.steer = np.clip(dir_angle, -15, 15)
-            elif Rover.near_sample > 0:
+            elif Rover.near_sample > 0: # stop to pickup
                 if Rover.vel > 0:
                     Rover.brake = Rover.brake_set
                     Rover.throttle = 0
                 else:
                     Rover.send_pickup = True
                     Rover.mode = 'forward'
+
+            picking_counter += 1
+
     # Just to make the rover do something 
     # even if no modifications have been made to the code
     else:
