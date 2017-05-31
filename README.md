@@ -1,83 +1,11 @@
-# Project: Search and Sample Return
----
-
-## Notebook Analysis
-
-### Add/modify functions to allow for color selection of obstacles and rock samples
-
-1. find the sample rock by color selection near to yellow useing function 
-``` python
-def color_near(img, rgb_anchor=(130, 120, 0)):
-    color_select = np.zeros_like(img[:,:,0])
-    near_bool = (np.abs(img - rgb_anchor) < (60, 60, 20)).all(axis=2)
-    color_select[near_bool] = 1
-    return color_select
-```
-
-2. find the obstacle by set substracting
-``` python
-obstacle = color_thresh(warped, (0, 0, 0)) - terrian - rock_sample
-```
-
-### the main part of my modifcation of `processing_image()`
-```
-# 1) Define source and destination points for perspective transform
-# 2) Apply perspective transform
-warped = perspect_transform(img, source, destination)
-# 3) Apply color threshold to identify navigable terrain/obstacles/rock samples
-terrian = color_thresh(warped)
-rock_sample = color_near(warped)
-obstacle = color_thresh(warped, (0, 0, 0)) - terrian - rock_sample
-# 4) Convert thresholded image pixel values to rover-centric coords
-x_nav_rover, y_nav_rover = rover_coords(terrian)
-x_obstacle_rover, y_obstacle_rover = rover_coords(obstacle)
-x_rock_sample_rover, y_rock_sample_rover = rover_coords(rock_sample)
-# 5) Convert rover-centric pixel values to world coords
-scale = 10
-# Get navigable pixel positions in world coords
-navigable_x_world, navigable_y_world = pix_to_world(
-                            x_nav_rover,
-                            y_nav_rover,                    
-                            data.xpos[data.count], 
-                            data.ypos[data.count], data.yaw[data.count], 
-                            data.worldmap.shape[0], scale)
-rock_x_world, rock_y_world = pix_to_world(
-                            x_rock_sample_rover, 
-                            y_rock_sample_rover, data.xpos[data.count], 
-                            data.ypos[data.count], data.yaw[data.count], 
-                            data.worldmap.shape[0], scale)
-obstacle_x_world, obstacle_y_world = pix_to_world(
-                            x_obstacle_rover, 
-                            y_obstacle_rover, 
-                            data.xpos[data.count], 
-                            data.ypos[data.count], data.yaw[data.count], 
-                            data.worldmap.shape[0], scale)
-
-# Add pixel positions to worldmap
-# 6) Update worldmap (to be displayed on right side of screen)
-data.worldmap[obstacle_y_world, obstacle_x_world, 0] += 1
-data.worldmap[rock_y_world, rock_x_world, 1] += 1
-data.worldmap[navigable_y_world, navigable_x_world, 2] += 1
-```
-
-
-## Autonomous Navigation and Mapping
-
-* Fill in the `perception_step()` function within the `perception.py` script with the appropriate image processing functions to create a map and update `Rover()` data (similar to what you did with `process_image()` in the notebook). 
-* Fill in the `decision_step()` function within the `decision.py` script with conditional statements that take into consideration the outputs of the `perception_step()` in deciding how to issue throttle, brake and steering commands. 
-* Iterate on your perception and decision function until your rover does a reasonable (need to define metric) job of navigating and mapping.  
-
 [//]: # (Image References)
 
 [states]: ./misc/states.jpg
 [image2]: ./calibration_images/example_grid1.jpg
 [image3]: ./calibration_images/example_rock1.jpg 
 
-## [Rubric](https://review.udacity.com/#!/rubrics/916/view) Points
-### Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
-
+# Project: Search and Sample Return
 ---
-### Writeup / README
 
 #### 1. Provide a Writeup / README that includes all the rubric points and how you addressed each one.  You can submit your writeup as markdown or pdf.  
 
