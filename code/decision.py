@@ -51,7 +51,7 @@ def decision_step(Rover):
                 
                 Rover.steer = np.clip(dir_angle, -15, 15)
 
-                # get stuck
+                # get stuck need to get out of it
                 if Rover.vel < 0.1:
                     counter+= 1
                     if counter > 30:
@@ -89,7 +89,7 @@ def decision_step(Rover):
                     Rover.throttle = Rover.throttle_set
                     # Release the brake
                     Rover.brake = 0
-                    # Set steer to mean angle
+                    # Set steer to a far way
                     Rover.steer = 0.5*(Rover.nav_angles[np.argmax(Rover.nav_dists)] + np.percentile(Rover.nav_angles * 180/np.pi, np.random.randint(70, 90))) # np.clip(np.mean(Rover.nav_angles * 180/np.pi), -15, 15)
                     Rover.mode = 'forward'
 
@@ -99,19 +99,15 @@ def decision_step(Rover):
         elif Rover.mode == "stuck":
             stuck_change_counter += 1
             Rover.throttle = 0
-            # Release the brake to allow turning
             Rover.brake = 0
-            # Turn range is +/- 15 degrees, when stopped the next line will induce 4-wheel turning
-            Rover.steer = 15 * (-1 if np.random.randint(-10, 10) < 0 else 1) # Could be more clever here about which way to turn
+            Rover.steer = 15 # try opposite to stop
 
-            if stuck_change_counter > np.random.randint(10, 40):
+            if stuck_change_counter > np.random.randint(10, 40): # try different stuggling time
                 counter = 0
                 stuck_change_counter = 0
                 Rover.throttle = Rover.throttle_set
-                # Release the brake to allow turning
                 Rover.brake = 0
-                # Turn range is +/- 15 degrees, when stopped the next line will induce 4-wheel turning
-                Rover.steer = np.mean(Rover.sample_angles) * 180 / np.pi if len(Rover.sample_angles)> 0 else 0 # Could be more clever here about which way to turn
+                Rover.steer = np.mean(Rover.sample_angles) * 180 / np.pi if len(Rover.sample_angles)> 0 else 0
                 Rover.mode = "forward"
 
         elif Rover.mode == "found":
@@ -140,7 +136,7 @@ def decision_step(Rover):
             found_counter = 0
             if len(Rover.sample_angles) == 0 and picking_counter > 400:
                 Rover.mode = 'forward'
-            elif Rover.near_sample == 0: # moving to target
+            elif Rover.near_sample == 0: # moving to target slowly
                 Rover.brake = 0
                 Rover.throttle = Rover.throttle_set * 0.5
                 dir_angle = np.mean(Rover.sample_angles) * 180 / np.pi if len(Rover.sample_angles) > 0 else 0
