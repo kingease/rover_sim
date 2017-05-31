@@ -139,7 +139,7 @@ def perception_step(Rover):
                                     Rover.worldmap.shape[0], scale)
 
     # 7) Update Rover worldmap (to be displayed on right side of screen)
-    angle_thres = 1
+    angle_thres = 0.5
     if not(Rover.pitch > angle_thres and Rover.pitch < 360 - angle_thres) and not(abs(Rover.roll) > angle_thres and Rover.roll < 360 - angle_thres):
         Rover.worldmap[obstacle_y_world, obstacle_x_world, 0] += 1
         Rover.worldmap[rock_y_world, rock_x_world, 1] += 1
